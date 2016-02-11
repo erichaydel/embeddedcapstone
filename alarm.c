@@ -254,7 +254,7 @@ alarm_task (void * p_arg)
 	}
         else if (flags & ALARM_NONE)
         {
-            BSP_GraphLCD_String(7, "");
+            BSP_GraphLCD_String(7, "               ");
             // No alarm should be playing.
 	    if (b_speaker_task_alive)
             {

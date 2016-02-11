@@ -31,12 +31,13 @@
 #include "scuba.h"
 
 //Scuba globals
-int16_t g_current_air_volume = 50;
+int32_t g_current_air_volume = (50*100);
 int32_t g_current_depth_mm = 0;
 uint32_t g_dive_time = 0;
 int16_t g_air_to_surface;
 int16_t g_p_rate;
 
+int8_t g_b_metric = 1;
 extern OS_SEM g_add_air_sem;
 extern OS_FLAG_GRP g_alarm_flags;
 
@@ -47,11 +48,11 @@ extern OS_FLAG_GRP g_alarm_flags;
 void dive_task(void * p_arg)
 {
         OS_ERR err;
-        uint16_t alarm_curr = 0;
-        uint16_t alarm_prev = 0;
+        uint16_t alarm_curr = ALARM_NONE;
+        uint16_t alarm_prev = ALARM_NONE;
         // Wait for message from ADC ISR.
         uint32_t dive_idx = 0;
-        
+
         for(;;)
         {
           //in meters/min
@@ -62,8 +63,8 @@ void dive_task(void * p_arg)
             //////////////////
             // Get current depth
             //////////////////
-            int16_t depth_change = depth_change_in_mm(g_p_rate);          // Returns change in one half second
-            int16_t prev_depth = g_current_depth_mm;
+            int32_t depth_change = depth_change_in_mm(g_p_rate);          // Returns change in one half second
+            int32_t prev_depth = g_current_depth_mm;
             g_current_depth_mm = (int32_t) (prev_depth - depth_change);
             if (g_current_depth_mm < 0)
             {
@@ -87,32 +88,44 @@ void dive_task(void * p_arg)
               g_dive_time = 0;
             }
             dive_idx++;
-            
+
             //////////////////
             // Only update air if not at surface
             //////////////////
             if (g_current_depth_mm > 0)
             {
-                uint16_t air_consumed = gas_rate_in_cl(g_current_depth_mm);
+                uint32_t air_consumed = gas_rate_in_cl(g_current_depth_mm);
 
-                uint16_t prev_air = g_current_air_volume;
+                uint32_t prev_air = g_current_air_volume;
 
-                g_current_air_volume = (int16_t) prev_air - (int16_t) air_consumed;
+                g_current_air_volume = (int32_t) prev_air - (int32_t) air_consumed;
             }
-
-            ///////////////
-            /// Check for alarm
-            ///////////////
             if (g_current_air_volume < 0)
             {
               g_current_air_volume = 0;
             }
 
+
+            ///////////////
+            /// Check for alarm
+            ///////////////
+
             // Select proper alarm state.
             if (g_current_air_volume < g_air_to_surface)
             {
-                alarm_curr = ALARM_HIGH;
+                alarm_curr |= ALARM_HIGH;
             }
+
+            else if (g_p_rate > 15)
+            {
+                alarm_curr |= ALARM_MEDIUM;
+            }
+
+            else if(g_current_depth_mm > (40 * 1000))
+            {
+                alarm_curr |= ALARM_LOW;
+            }
+
             else
             {
                 alarm_curr = ALARM_NONE;
@@ -161,8 +174,8 @@ add_air_task (void * p_arg) {
     {
         // Wait for a signal from the button debouncer.
 	OSSemPend(&g_add_air_sem, 0, OS_OPT_PEND_BLOCKING, 0, &err);
-        if ( g_current_depth_mm  == 0 && (g_current_air_volume < 2000) ) {
-            g_current_air_volume += 5;
+        if ( g_current_depth_mm  == 0 && (g_current_air_volume < (2000* 100)) ) {
+            g_current_air_volume += (5 * 100);
         }
         // Check for errors.
 	//assert(OS_ERR_NONE == err);
@@ -186,23 +199,41 @@ print_task(void * p_arg) {
 
    (void)p_arg;    // NOTE: Silence compiler warning about unused param.
 
+
+
    for(;;)
    {
-     //Format and display
-     sprintf(p_str_brand, "Jaws&Co.");
-     BSP_GraphLCD_String(LCD_LINE0, (char const *) p_str_brand);
 
-     sprintf(p_str_depth, "DEPTH: %4d", (g_current_depth_mm / 1000));
-     BSP_GraphLCD_String(LCD_LINE2, (char const *) p_str_depth);
+    if (g_b_metric)
+    {
+        BSP_GraphLCD_String(LCD_LINE1, "Units: Meters");
+        sprintf(p_str_depth, "DEPTH: %4d", (int32_t)(g_current_depth_mm / 1000));
+        BSP_GraphLCD_String(LCD_LINE2, (char const *) p_str_depth);
 
-     sprintf(p_str_rate, "RATE: %4d", g_p_rate);
-     BSP_GraphLCD_String(LCD_LINE3, (char const *) p_str_rate);
+        sprintf(p_str_rate, "RATE: %4d", g_p_rate);
+        BSP_GraphLCD_String(LCD_LINE3, (char const *) p_str_rate);
+    }
+    else
+    {
+        BSP_GraphLCD_String(LCD_LINE1, "Units: Feet");
+        sprintf(p_str_depth, "DEPTH: %4d", (int32_t)(MM2FT(g_current_depth_mm)));
+        BSP_GraphLCD_String(LCD_LINE2, (char const *) p_str_depth);
 
-     sprintf(p_str_air_volume, "AIR: %4u", g_current_air_volume);
-     BSP_GraphLCD_String(LCD_LINE4, (char const *) p_str_air_volume);
+        sprintf(p_str_rate, "RATE: %4d", MM2FT(g_p_rate*1000));
+        BSP_GraphLCD_String(LCD_LINE3, (char const *) p_str_rate);
+    }
 
-     sprintf(p_str_time, "EDT: %4u", g_dive_time);
-     BSP_GraphLCD_String(LCD_LINE5, (char const *) p_str_time);
+    //Format and display
+    sprintf(p_str_brand, "Jaws&Co.");
+    BSP_GraphLCD_String(LCD_LINE0, (char const *) p_str_brand);
+
+    sprintf(p_str_air_volume, "AIR: %4u", (g_current_air_volume / 100));
+    BSP_GraphLCD_String(LCD_LINE4, (char const *) p_str_air_volume);
+
+    sprintf(p_str_time, "EDT: %4u", g_dive_time);
+    BSP_GraphLCD_String(LCD_LINE5, (char const *) p_str_time);
+
+
    }
 
 }

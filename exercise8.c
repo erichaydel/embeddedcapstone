@@ -97,6 +97,8 @@ static OS_TCB   g_divetask_tcb;
 static OS_TCB   g_print_tcb;
 
 // Allocate Shared OS Objects
+extern uint8_t g_b_metric;
+
 OS_SEM      g_add_air_sem;
 OS_SEM      g_sw1_sem;
 OS_SEM      g_sw2_sem;
@@ -158,17 +160,10 @@ sw2_task (void * p_arg)
     {
         // Wait for a signal from the button debouncer.
 	OSSemPend(&g_sw2_sem, 0, OS_OPT_PEND_BLOCKING, 0, &err);
-
- //        // Check for errors.
-	// assert(OS_ERR_NONE == err);
+	assert(OS_ERR_NONE == err);
 
  //        // Increment button press counter.
-	// sw2_counter++;
-
- //        // Format and display current count.
-	// sprintf(p_str, "SW2: % 4u", sw2_counter);
- //        BSP_GraphLCD_String(LCD_LINE2, (char const *) p_str);
- //    }
+	g_b_metric = !g_b_metric;
     }
 }
 

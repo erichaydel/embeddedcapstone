@@ -105,10 +105,6 @@ void
 adc_task (void * p_arg)
 {
     OS_ERR     err;
-    OS_FLAGS   alarm_curr = ALARM_NONE;
-    OS_FLAGS   alarm_prev = ALARM_NONE;
-
-
     (void)p_arg;    // NOTE: Silence compiler warning about unused param.
 
     // Create message queue.
@@ -135,27 +131,6 @@ adc_task (void * p_arg)
       	assert(OS_ERR_NONE == err);
 
         g_p_rate = *p_sample;
-
-        // Select proper alarm state.
-        if (*p_sample > 15)
-        {
-            alarm_curr = ALARM_MEDIUM;
-        }
-        else
-        {
-            alarm_curr = ALARM_NONE;
-        }
-
-        // React to changes in speaker priority.
-        if (alarm_curr != alarm_prev)
-        {
-            // Notify the alarm task of the change.
-            OSFlagPost(&g_alarm_flags, alarm_curr, OS_OPT_POST_FLAG_SET, &err);
-            assert(OS_ERR_NONE == err);
-        }
-
-        // Save current alarm state for next cycle.
-        alarm_prev = alarm_curr;
     }
 }
 
