@@ -21,10 +21,11 @@
 #include "common.h"
 #include "alarm.h"
 #include  <bsp_glcd.h>
+#include "scuba.h"
 
 
 // Message Queue for ISR->Task Communication
-static OS_Q  g_adc_q;
+//OS_Q  g_adc_q;
 
 
 #define ADC_SOURCE_VR1      2
@@ -196,13 +197,15 @@ void
 adc_isr (void)
 {
     static uint16_t	 sample;    // NOTE: Not on the stack; so address is valid.
+    static uint16_t      adc_air_rate;
     OS_ERR	         err;
 
 
     // Read from the A/D converter and reduce the range from 12-bit to 10-bit.
     sample = adc.data[ADC_SOURCE_VR1] >> 2;
+    adc_air_rate = ADC2RATE(sample);
 	
     // Send the address of the sample via a message queue.
-    OSQPost(&g_adc_q, (void *)&sample, sizeof(sample), OS_OPT_POST_FIFO, &err);	
+    OSQPost(&g_adc_q, (void *)&adc_air_rate, sizeof(adc_air_rate), OS_OPT_POST_FIFO, &err);	
     assert(OS_ERR_NONE == err || OS_ERR_Q_MAX == err);
 }

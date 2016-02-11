@@ -9,6 +9,8 @@
 #ifndef _ADC_H
 #define _ADC_H
 
+extern OS_Q g_adc_q; 
+
 void  adc_task (void * p_arg);
 
 #endif /* _ADC_H */

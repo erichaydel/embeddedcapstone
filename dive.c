@@ -17,6 +17,7 @@
 #include  <os.h>
 #include  <bsp_glcd.h>
 
+
 #include  "bsp.h"
 #include  "bsp_int_vect_tbl.h"
 #include  "bsp_led.h"
@@ -27,12 +28,40 @@
 #include "common.h"
 #include "adc.h"
 #include "alarm.h"
+#include "scuba.h"
+
+uint16_t g_current_depth;
+uint16_t g_air_to_surface;
+uint16_t * g_p_rate;
+uint16_t  g_current_air_volume;
+
+//OS_Q g_adc_q;
 
 //*****************Tasks
 //****Depth updating 
 //Get current rate and adjust depth using depth_change_in_mm() macro.
-
-//Air updating
+void dive_task(void * p_arg)
+{
+        OS_ERR err;
+        // Wait for message from ADC ISR.
+        OS_MSG_SIZE  msg_size;
+        
+        //in meters/min
+	uint16_t * g_p_rate = (uint16_t *)
+        OSQPend(&g_adc_q, 0, OS_OPT_PEND_BLOCKING, &msg_size, NULL, &err);
+	assert(OS_ERR_NONE == err);
+        
+        uint16_t depth_change = depth_change_in_mm(*g_p_rate);
+        uint16_t prev_depth = g_current_depth;
+        g_current_depth = prev_depth + depth_change;
+        
+        uint16_t air_consumed = gas_rate_in_cl(g_current_depth);
+        g_air_to_surface = gas_to_surface_in_cl(g_current_depth);
+        
+        uint16_t prev_air = g_current_air_volume;
+        g_current_air_volume = prev_air - air_consumed;
+}
+//air updating
 //Adjust air using gas_rate_in_cl() function
 
 //Dive_time - keep track of elapsed dive time
@@ -48,7 +77,7 @@
 //Add air task
 /*!
 * @brief Button SW1 Catcher Task
-*/
+*//*
 void
 sw1_task (void * p_arg)
 {
@@ -79,3 +108,4 @@ sw1_task (void * p_arg)
         BSP_GraphLCD_String(LCD_LINE1, (char const *) p_str);
     }
 }
+*/
