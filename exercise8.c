@@ -145,31 +145,30 @@ led4_task (void * p_arg)
 void
 sw2_task (void * p_arg)
 {
-    uint16_t    sw2_counter = 0;
-    char	    p_str[LCD_CHARS_PER_LINE+1];
     OS_ERR	    err;
 
 
     (void)p_arg;    // NOTE: Silence compiler warning about unused param.
 
-    // Draw the initial display.
-    sprintf(p_str, "SW2: % 4u", sw2_counter);
-    BSP_GraphLCD_String(LCD_LINE2, (char const *) p_str);
+    // // Draw the initial display.
+    // sprintf(p_str, "SW2: % 4u", sw2_counter);
+    // BSP_GraphLCD_String(LCD_LINE2, (char const *) p_str);
 
     for (;;)
     {
         // Wait for a signal from the button debouncer.
 	OSSemPend(&g_sw2_sem, 0, OS_OPT_PEND_BLOCKING, 0, &err);
 
-        // Check for errors.
-	assert(OS_ERR_NONE == err);
+ //        // Check for errors.
+	// assert(OS_ERR_NONE == err);
 
-        // Increment button press counter.
-	sw2_counter++;
+ //        // Increment button press counter.
+	// sw2_counter++;
 
-        // Format and display current count.
-	sprintf(p_str, "SW2: % 4u", sw2_counter);
-        BSP_GraphLCD_String(LCD_LINE2, (char const *) p_str);
+ //        // Format and display current count.
+	// sprintf(p_str, "SW2: % 4u", sw2_counter);
+ //        BSP_GraphLCD_String(LCD_LINE2, (char const *) p_str);
+ //    }
     }
 }
 

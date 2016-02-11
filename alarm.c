@@ -183,7 +183,7 @@ alarm_task (void * p_arg)
         if (flags & ALARM_HIGH)
         {
 
-            BSP_GraphLCD_String(7, "Alarm: HIGH");
+            BSP_GraphLCD_String(7, "Alarm: HIGH    ");
 
             // High priority alarm should be playing.
             if (p_waveform != &alarm_high)
