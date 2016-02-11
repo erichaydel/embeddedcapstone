@@ -1,0 +1,10 @@
+/Debug/
+*.bat
+*.eww
+*.ewp
+*.ewd
+*.wspx
+*.dep
+/settings/
+*.o
+*.s
