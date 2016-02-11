@@ -43,6 +43,12 @@ extern OS_SEM g_add_air_sem;
 uint16_t g_current_air_volume;
 uint16_t g_current_depth;
 
+extern OS_SEM g_add_air_sem;
+
+//Scuba globals
+uint16_t g_current_air_volume;
+uint16_t g_current_depth;
+
 //*****************Tasks
 //****Depth updating
 //Get current rate and adjust depth using depth_change_in_mm() macro.
@@ -79,6 +85,7 @@ void dive_task(void * p_arg)
 
 //Add timer task
 
+//Add air task
 /* add_air_task
 *  Pends air semaphore and increments global air volume by 5 if at the surface and tank isn't filled.
 */
@@ -102,7 +109,6 @@ add_air_task (void * p_arg)
         }
         // Check for errors.
 	//assert(OS_ERR_NONE == err);
-
         // Increment button press counter.
 	//sw1_counter++;
 
