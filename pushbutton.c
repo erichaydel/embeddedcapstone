@@ -13,7 +13,10 @@
 #include "os.h"
 #include "iorx63n.h"
 
-#include "pushbutton.h"								
+#include "pushbutton.h"
+#include "dive.h"
+
+extern OS_SEM g_add_air_sem;
 
 
 /*!

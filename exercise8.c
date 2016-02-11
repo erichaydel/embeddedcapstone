@@ -69,6 +69,7 @@
 #define  ALARM_PRIO            11   // Up to every 125 ms, when chopping.
 #define  SW2_PRIO              12   // Up to every 150 ms, if retriggered.
 #define  DIVE_PRIO             10
+#define  PRINT_PRIO            14
 #define  LED4_PRIO             14   // Every 500 ms, in a timed loop.
 
 // Allocate Task Stacks
@@ -82,6 +83,7 @@ static CPU_STK  g_sw2_stack[TASK_STACK_SIZE];
 static CPU_STK  g_adc_stack[TASK_STACK_SIZE];
 static CPU_STK  g_alarm_stack[TASK_STACK_SIZE];
 static CPU_STK  g_dive_stack[TASK_STACK_SIZE];
+static CPU_STK  g_print_stack[TASK_STACK_SIZE];
 
 // Allocate Task Control Blocks
 static OS_TCB   g_startup_tcb;
@@ -92,6 +94,7 @@ static OS_TCB   g_sw2_tcb;
 static OS_TCB   g_adc_tcb;
 static OS_TCB   g_alarm_tcb;
 static OS_TCB   g_divetask_tcb;
+static OS_TCB   g_print_tcb;
 
 // Allocate Shared OS Objects
 OS_SEM      g_add_air_sem;
@@ -298,6 +301,20 @@ startup_task (void * p_arg)
                  0,
                  DIVE_PRIO,
                  &g_dive_stack[0],
+                 TASK_STACK_SIZE / 10u,
+                 TASK_STACK_SIZE,
+                 0u,
+                 0u,
+                 0,
+                 0,
+                 &err);
+
+    OSTaskCreate(&g_print_tcb,
+                 "Dive Task Update",
+                 print_task,
+                 0,
+                 PRINT_PRIO,
+                 &g_print_stack[0],
                  TASK_STACK_SIZE / 10u,
                  TASK_STACK_SIZE,
                  0u,

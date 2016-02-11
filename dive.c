@@ -27,28 +27,22 @@
 #include "common.h"
 #include "adc.h"
 #include "alarm.h"
+#include "dive.h"
 #include "scuba.h"
 
+//Scuba globals
+uint16_t * g_p_rate;
+uint16_t g_current_air_volume;
 uint16_t g_current_depth;
+uint32_t g_current_time;
 uint16_t g_air_to_surface;
 uint16_t * g_p_rate;
 uint16_t  g_current_air_volume;
 
-//OS_Q g_adc_q;
-
 extern OS_SEM g_add_air_sem;
-
-//Scuba globals
-uint16_t g_current_air_volume;
-uint16_t g_current_depth;
-
-extern OS_SEM g_add_air_sem;
-
-//Scuba globals
-uint16_t g_current_air_volume;
-uint16_t g_current_depth;
 
 //*****************Tasks
+
 //****Depth updating
 //Get current rate and adjust depth using depth_change_in_mm() macro.
 void dive_task(void * p_arg)
@@ -58,9 +52,9 @@ void dive_task(void * p_arg)
         OS_MSG_SIZE  msg_size;
 
         //in meters/min
-	uint16_t * g_p_rate = (uint16_t *)
-        OSQPend(&g_adc_q, 0, OS_OPT_PEND_BLOCKING, &msg_size, NULL, &err);
-	assert(OS_ERR_NONE == err);
+        uint16_t * g_p_rate = (uint16_t *)
+            OSQPend(&g_adc_q, 0, OS_OPT_PEND_BLOCKING, &msg_size, NULL, &err);
+        assert(OS_ERR_NONE == err);
 
         uint16_t depth_change = depth_change_in_mm(*g_p_rate);
         uint16_t prev_depth = g_current_depth;
@@ -72,7 +66,8 @@ void dive_task(void * p_arg)
         uint16_t prev_air = g_current_air_volume;
         g_current_air_volume = prev_air - air_consumed;
 }
-//air updating
+
+//Air updating
 //Adjust air using gas_rate_in_cl() function
 
 //Dive_time - keep track of elapsed dive time
@@ -84,13 +79,14 @@ void dive_task(void * p_arg)
 
 //Add timer task
 
+
 //Add air task
 /* add_air_task
 *  Pends air semaphore and increments global air volume by 5 if at the surface and tank isn't filled.
 */
 void
-add_air_task (void * p_arg)
-{
+add_air_task (void * p_arg) {
+
     uint16_t        sw1_counter = 0;
     char	    p_str[LCD_CHARS_PER_LINE+1];
     OS_ERR	    err;
@@ -104,45 +100,45 @@ add_air_task (void * p_arg)
         // Wait for a signal from the button debouncer.
 	OSSemPend(&g_add_air_sem, 0, OS_OPT_PEND_BLOCKING, 0, &err);
         if ( g_current_depth == 0 && (g_current_air_volume < 2000) ) {
-            g_current_air_volume += 5;          
-        }        
+            g_current_air_volume += 5;
+        }
         // Check for errors.
 	//assert(OS_ERR_NONE == err);
-		
+
         // Increment button press counter.
 	//sw1_counter++;
 
-       
+
     }
 }
 
 //Print Task
 void
 print_task(void * p_arg) {
-  
+
    OS_ERR err;
    char     p_str_brand[LCD_CHARS_PER_LINE+1];
    char	    p_str_depth[LCD_CHARS_PER_LINE+1];
    char	    p_str_rate[LCD_CHARS_PER_LINE+1];
    char	    p_str_air_volume[LCD_CHARS_PER_LINE+1];
    char	    p_str_time[LCD_CHARS_PER_LINE+1];
-   
+
    (void)p_arg;    // NOTE: Silence compiler warning about unused param.
-   
+
    //Format and display
    sprintf(p_str_brand, "Jaws&Co.");
    BSP_GraphLCD_String(LCD_LINE0, (char const *) p_str_brand);
-   
+
    sprintf(p_str_depth, "DEPTH: %4u", g_current_depth);
    BSP_GraphLCD_String(LCD_LINE2, (char const *) p_str_depth);
-   
+
    sprintf(p_str_rate, "RATE: %4u", g_p_rate);
    BSP_GraphLCD_String(LCD_LINE3, (char const *) p_str_rate);
-   
-   sprintf(p_str_air_volume, ": %4u", g_current_air_volume);
+
+   sprintf(p_str_air_volume, "AIR: %4u", g_current_air_volume);
    BSP_GraphLCD_String(LCD_LINE4, (char const *) p_str_air_volume);
-   
-   sprintf(p_str_time, "EDT: %2u:%2u:%2u", g_current_time);
+
+   sprintf(p_str_time, "EDT: %4u", g_current_time);
    BSP_GraphLCD_String(LCD_LINE5, (char const *) p_str_time);
-   
+
 }
