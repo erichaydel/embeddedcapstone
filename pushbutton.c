@@ -55,7 +55,7 @@ debounce_task (void * p_arg)
 	if ((0 == b_sw1_curr) && (0 == b_sw1_prev))
         {
             // Signal that SW1 has been pressed (or is still held down).
-	    OSSemPost(&g_sw1_sem, OS_OPT_POST_1, &err);
+	    OSSemPost(&g_add_air_sem, OS_OPT_POST_1, &err);
 	    assert(OS_ERR_NONE == err);
 	}
 

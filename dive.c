@@ -17,7 +17,6 @@
 #include  <os.h>
 #include  <bsp_glcd.h>
 
-
 #include  "bsp.h"
 #include  "bsp_int_vect_tbl.h"
 #include  "bsp_led.h"
@@ -105,15 +104,45 @@ add_air_task (void * p_arg)
         // Wait for a signal from the button debouncer.
 	OSSemPend(&g_add_air_sem, 0, OS_OPT_PEND_BLOCKING, 0, &err);
         if ( g_current_depth == 0 && (g_current_air_volume < 2000) ) {
-            g_current_air_volume += 5;
-        }
+            g_current_air_volume += 5;          
+        }        
         // Check for errors.
 	//assert(OS_ERR_NONE == err);
+		
         // Increment button press counter.
 	//sw1_counter++;
 
-        // Format and display current count.
-	//sprintf(p_str, "SW1: % 4u", sw1_counter);
-        //BSP_GraphLCD_String(LCD_LINE1, (char const *) p_str);
+       
     }
+}
+
+//Print Task
+void
+print_task(void * p_arg) {
+  
+   OS_ERR err;
+   char     p_str_brand[LCD_CHARS_PER_LINE+1];
+   char	    p_str_depth[LCD_CHARS_PER_LINE+1];
+   char	    p_str_rate[LCD_CHARS_PER_LINE+1];
+   char	    p_str_air_volume[LCD_CHARS_PER_LINE+1];
+   char	    p_str_time[LCD_CHARS_PER_LINE+1];
+   
+   (void)p_arg;    // NOTE: Silence compiler warning about unused param.
+   
+   //Format and display
+   sprintf(p_str_brand, "Jaws&Co.");
+   BSP_GraphLCD_String(LCD_LINE0, (char const *) p_str_brand);
+   
+   sprintf(p_str_depth, "DEPTH: %4u", g_current_depth);
+   BSP_GraphLCD_String(LCD_LINE2, (char const *) p_str_depth);
+   
+   sprintf(p_str_rate, "RATE: %4u", g_p_rate);
+   BSP_GraphLCD_String(LCD_LINE3, (char const *) p_str_rate);
+   
+   sprintf(p_str_air_volume, ": %4u", g_current_air_volume);
+   BSP_GraphLCD_String(LCD_LINE4, (char const *) p_str_air_volume);
+   
+   sprintf(p_str_time, "EDT: %2u:%2u:%2u", g_current_time);
+   BSP_GraphLCD_String(LCD_LINE5, (char const *) p_str_time);
+   
 }
