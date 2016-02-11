@@ -64,13 +64,13 @@
 // Relative Task Priorities (0 = highest; 15 = idle task)
 #define  STARTUP_PRIO           1   // Highest priority, to launch others.
 #define  DEBOUNCE_PRIO          7   // Every 50 ms, in a timed loop.
-#define  SW1_PRIO               8   // Up to every 50 ms, when held down.
+#define  ADD_AIR_PRIO               8   // Up to every 50 ms, when held down.
 #define  ADC_PRIO               9   // Every 125 ms, in a timed loop.
 #define  ALARM_PRIO            11   // Up to every 125 ms, when chopping.
 #define  SW2_PRIO              12   // Up to every 150 ms, if retriggered.
 #define  LED6_PRIO             13   // Every 167 ms, in a timed loop.
 #define  LED5_PRIO             14   // Every 500 ms, in a timed loop.
-#define  DIVE_PRIO             10   
+#define  DIVE_PRIO             10
 
 // Allocate Task Stacks
 #define  TASK_STACK_SIZE      128
@@ -79,7 +79,7 @@ static CPU_STK  g_startup_stack[TASK_STACK_SIZE];
 static CPU_STK  g_led5_stack[TASK_STACK_SIZE];
 static CPU_STK  g_led6_stack[TASK_STACK_SIZE];
 static CPU_STK  g_debounce_stack[TASK_STACK_SIZE];
-static CPU_STK  g_sw1_stack[TASK_STACK_SIZE];
+static CPU_STK  g_add_air_stack[TASK_STACK_SIZE];
 static CPU_STK  g_sw2_stack[TASK_STACK_SIZE];
 static CPU_STK  g_adc_stack[TASK_STACK_SIZE];
 static CPU_STK  g_alarm_stack[TASK_STACK_SIZE];
@@ -90,19 +90,23 @@ static OS_TCB   g_startup_tcb;
 static OS_TCB   g_led5_tcb;
 static OS_TCB   g_led6_tcb;
 static OS_TCB   g_debounce_tcb;
-static OS_TCB   g_sw1_tcb;
+static OS_TCB   g_add_air_tcb;
 static OS_TCB   g_sw2_tcb;
 static OS_TCB   g_adc_tcb;
 static OS_TCB   g_alarm_tcb;
 static OS_TCB   g_divetask_tcb;
 
 // Allocate Shared OS Objects
-OS_SEM      g_sw1_sem;
+OS_SEM      g_add_air_sem;
 OS_SEM      g_sw2_sem;
 
 OS_Q  g_adc_q;
 
 OS_FLAG_GRP g_alarm_flags;
+
+
+
+
 
 /*
 *********************************************************************************************************
@@ -168,7 +172,7 @@ sw2_task (void * p_arg)
     uint16_t    sw2_counter = 0;
     char	    p_str[LCD_CHARS_PER_LINE+1];
     OS_ERR	    err;
-	
+
 
     (void)p_arg;    // NOTE: Silence compiler warning about unused param.
 
@@ -183,7 +187,7 @@ sw2_task (void * p_arg)
 
         // Check for errors.
 	assert(OS_ERR_NONE == err);
-		
+
         // Increment button press counter.
 	sw2_counter++;
 
@@ -209,7 +213,7 @@ startup_task (void * p_arg)
 
     // Set the font for the LCD
     BSP_GraphLCD_SetFont(GLYPH_FONT_8_BY_8);
-    
+
     // Initialize the reentrant LED driver.
     protectedLED_Init();
 
@@ -245,11 +249,11 @@ startup_task (void * p_arg)
     assert(OS_ERR_NONE == err);
 
     // Create the semaphores signaled by the button debouncer.
-    OSSemCreate(&g_sw1_sem, "Switch 1", 0, &err);
-    assert(OS_ERR_NONE == err);	
+    OSSemCreate(&g_add_air_sem, "Add Air SW1", 0, &err);
+    assert(OS_ERR_NONE == err);
 
     OSSemCreate(&g_sw2_sem, "Switch 2", 0, &err);
-    assert(OS_ERR_NONE == err);	
+    assert(OS_ERR_NONE == err);
 
     // Create the button debouncer.
     OSTaskCreate((OS_TCB     *)&g_debounce_tcb,
@@ -267,13 +271,13 @@ startup_task (void * p_arg)
                  (OS_ERR     *)&err);
     assert(OS_ERR_NONE == err);
 
-    // Create the tasks to catch the button semaphores.
-   /* OSTaskCreate((OS_TCB     *)&g_sw1_tcb,
-                 (CPU_CHAR   *)"Button 1 Catcher",
-                 (OS_TASK_PTR ) sw1_task,
+    // Add air Task - SW1
+    OSTaskCreate((OS_TCB     *)&g_add_air_tcb,
+                 (CPU_CHAR   *)"Add_air_SW1",
+                 (OS_TASK_PTR ) add_air_task,
                  (void       *) 0,
-                 (OS_PRIO     ) SW1_PRIO,
-                 (CPU_STK    *)&g_sw1_stack[0],
+                 (OS_PRIO     ) ADD_AIR_PRIO,
+                 (CPU_STK    *)&g_add_air_stack[0],
                  (CPU_STK_SIZE) TASK_STACK_SIZE / 10u,
                  (CPU_STK_SIZE) TASK_STACK_SIZE,
                  (OS_MSG_QTY  ) 0u,
@@ -282,7 +286,7 @@ startup_task (void * p_arg)
                  (OS_OPT      ) 0,
                  (OS_ERR     *)&err);
     assert(OS_ERR_NONE == err);
-*/
+
     OSTaskCreate((OS_TCB     *)&g_sw2_tcb,
                  (CPU_CHAR   *)"Button 2 Catcher",
                  (OS_TASK_PTR ) sw2_task,
@@ -329,17 +333,17 @@ startup_task (void * p_arg)
                  (OS_OPT      ) 0,
                  (OS_ERR     *)&err);
     assert(OS_ERR_NONE == err);
-    
-    OSTaskCreate(&g_divetask_tcb, 
-                 "Dive Task Update", 
-                 dive_task, 
-                 0, 
-                 DIVE_PRIO, 
+
+    OSTaskCreate(&g_divetask_tcb,
+                 "Dive Task Update",
+                 dive_task,
+                 0,
+                 DIVE_PRIO,
                  &g_dive_stack[0],
                  TASK_STACK_SIZE / 10u,
                  TASK_STACK_SIZE,
                  0u,
-                 0u, 
+                 0u,
                  0,
                  0,
                  &err);
@@ -348,7 +352,7 @@ startup_task (void * p_arg)
     OSTaskDel((OS_TCB *)0, &err);
 
     // We should never get here.
-    assert(0); 
+    assert(0);
 }
 
 
