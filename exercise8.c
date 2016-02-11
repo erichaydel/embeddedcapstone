@@ -66,15 +66,13 @@
 #define  ADC_PRIO               9   // Every 125 ms, in a timed loop.
 #define  ALARM_PRIO            11   // Up to every 125 ms, when chopping.
 #define  SW2_PRIO              12   // Up to every 150 ms, if retriggered.
-#define  LED6_PRIO             13   // Every 167 ms, in a timed loop.
-#define  LED5_PRIO             14   // Every 500 ms, in a timed loop.
+#define  LED4_PRIO             14   // Every 500 ms, in a timed loop.
 
 // Allocate Task Stacks
 #define  TASK_STACK_SIZE      128
 
 static CPU_STK  g_startup_stack[TASK_STACK_SIZE];
-static CPU_STK  g_led5_stack[TASK_STACK_SIZE];
-static CPU_STK  g_led6_stack[TASK_STACK_SIZE];
+static CPU_STK  g_led4_stack[TASK_STACK_SIZE];
 static CPU_STK  g_debounce_stack[TASK_STACK_SIZE];
 static CPU_STK  g_add_air_stack[TASK_STACK_SIZE];
 static CPU_STK  g_sw2_stack[TASK_STACK_SIZE];
@@ -83,8 +81,7 @@ static CPU_STK  g_alarm_stack[TASK_STACK_SIZE];
 
 // Allocate Task Control Blocks
 static OS_TCB   g_startup_tcb;
-static OS_TCB   g_led5_tcb;
-static OS_TCB   g_led6_tcb;
+static OS_TCB   g_led4_tcb;
 static OS_TCB   g_debounce_tcb;
 static OS_TCB   g_add_air_tcb;
 static OS_TCB   g_sw2_tcb;
@@ -93,13 +90,14 @@ static OS_TCB   g_alarm_tcb;
 
 // Allocate Shared OS Objects
 OS_SEM      g_add_air_sem;
+OS_SEM      g_sw1_sem;
 OS_SEM      g_sw2_sem;
 
 OS_FLAG_GRP g_alarm_flags;
 
 
 
-
+void add_air_task(void * p_arg);
 
 /*
 *********************************************************************************************************
@@ -108,37 +106,13 @@ OS_FLAG_GRP g_alarm_flags;
 */
 
 
-/*
-*********************************************************************************************************
-*                                      LOCAL FUNCTION PROTOTYPES
-*********************************************************************************************************
-*/
-/*!
-* @brief LED Flasher Task
-*/
-void
-led5_task (void * p_arg)
-{
-    OS_ERR  err;
-
-
-    (void)p_arg;    // NOTE: Silence compiler warning about unused param.
-
-    for (;;)
-    {
-        // Flash LED at 1 Hz.
-	protectedLED_Toggle(5);
-	OSTimeDlyHMSM(0, 0, 0, 500, OS_OPT_TIME_HMSM_STRICT, &err);
-    }
-}
-
 /*!
 *
 * @brief LED Flasher Task
 *
 */
 void
-led6_task (void * p_arg)
+led4_task (void * p_arg)
 {
     OS_ERR  err;
 
@@ -148,7 +122,7 @@ led6_task (void * p_arg)
     for (;;)
     {
         // Flash LED at 3 Hz.
-	protectedLED_Toggle(6);
+	protectedLED_Toggle(4);
 	OSTimeDlyHMSM(0, 0, 0, 167, OS_OPT_TIME_HMSM_STRICT, &err);
     }
 }
@@ -165,7 +139,7 @@ sw2_task (void * p_arg)
     uint16_t    sw2_counter = 0;
     char	    p_str[LCD_CHARS_PER_LINE+1];
     OS_ERR	    err;
-	
+
 
     (void)p_arg;    // NOTE: Silence compiler warning about unused param.
 
@@ -180,7 +154,7 @@ sw2_task (void * p_arg)
 
         // Check for errors.
 	assert(OS_ERR_NONE == err);
-		
+
         // Increment button press counter.
 	sw2_counter++;
 
@@ -206,47 +180,32 @@ startup_task (void * p_arg)
 
     // Set the font for the LCD
     BSP_GraphLCD_SetFont(GLYPH_FONT_8_BY_8);
-    
+
     // Initialize the reentrant LED driver.
     protectedLED_Init();
 
     // Create the LED flasher tasks.
-    OSTaskCreate((OS_TCB     *)&g_led5_tcb,
-                 (CPU_CHAR   *)"LED5 Flasher",
-                 (OS_TASK_PTR ) led5_task,
+    OSTaskCreate((OS_TCB     *) &g_led4_tcb,
+                 (CPU_CHAR   *) "LED4 Flasher",
+                 (OS_TASK_PTR ) led4_task,
                  (void       *) 0,
-                 (OS_PRIO     ) LED5_PRIO,
-                 (CPU_STK    *)&g_led5_stack[0],
+                 (OS_PRIO     ) LED4_PRIO,
+                 (CPU_STK    *) &g_led4_stack[0],
                  (CPU_STK_SIZE) TASK_STACK_SIZE / 10u,
                  (CPU_STK_SIZE) TASK_STACK_SIZE,
                  (OS_MSG_QTY  ) 0u,
                  (OS_TICK     ) 0u,
                  (void       *) 0,
                  (OS_OPT      ) 0,
-                 (OS_ERR     *)&err);
-    assert(OS_ERR_NONE == err);
-
-    OSTaskCreate((OS_TCB     *)&g_led6_tcb,
-                 (CPU_CHAR   *)"LED6 Flasher",
-                 (OS_TASK_PTR ) led6_task,
-                 (void       *) 0,
-                 (OS_PRIO     ) LED6_PRIO,
-                 (CPU_STK    *)&g_led6_stack[0],
-                 (CPU_STK_SIZE) TASK_STACK_SIZE / 10u,
-                 (CPU_STK_SIZE) TASK_STACK_SIZE,
-                 (OS_MSG_QTY  ) 0u,
-                 (OS_TICK     ) 0u,
-                 (void       *) 0,
-                 (OS_OPT      ) 0,
-                 (OS_ERR     *)&err);
+                 (OS_ERR     *) &err);
     assert(OS_ERR_NONE == err);
 
     // Create the semaphores signaled by the button debouncer.
     OSSemCreate(&g_add_air_sem, "Add Air SW1", 0, &err);
-    assert(OS_ERR_NONE == err);	
+    assert(OS_ERR_NONE == err);
 
     OSSemCreate(&g_sw2_sem, "Switch 2", 0, &err);
-    assert(OS_ERR_NONE == err);	
+    assert(OS_ERR_NONE == err);
 
     // Create the button debouncer.
     OSTaskCreate((OS_TCB     *)&g_debounce_tcb,
@@ -264,7 +223,7 @@ startup_task (void * p_arg)
                  (OS_ERR     *)&err);
     assert(OS_ERR_NONE == err);
 
-    // Add air Task - SW1 
+    // Add air Task - SW1
     OSTaskCreate((OS_TCB     *)&g_add_air_tcb,
                  (CPU_CHAR   *)"Add_air_SW1",
                  (OS_TASK_PTR ) add_air_task,
@@ -331,7 +290,7 @@ startup_task (void * p_arg)
     OSTaskDel((OS_TCB *)0, &err);
 
     // We should never get here.
-    assert(0); 
+    assert(0);
 }
 
 

@@ -28,6 +28,8 @@
 #include "adc.h"
 #include "alarm.h"
 
+extern OS_SEM g_add_air_sem;
+
 //Scuba globals
 uint16_t g_current_air_volume;
 uint16_t g_current_depth;
